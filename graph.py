@@ -3,7 +3,10 @@
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
+    ClearToolUsesEdit,
+    ContextEditingMiddleware,
     ModelCallLimitMiddleware,
+    ModelFallbackMiddleware,
     SummarizationMiddleware,
     ToolCallLimitMiddleware,
 )
@@ -57,13 +60,18 @@ agent = create_agent(
             messages_to_keep=5,
         ),
         ModelCallLimitMiddleware(
-            thread_limit=10,
+            thread_limit=None,
             run_limit=5,
             exit_behavior="end",
         ),
         ToolCallLimitMiddleware(
-            thread_limit=20,
-            run_limit=10,
+            thread_limit=None,
+            run_limit=5,
         ),
+        ContextEditingMiddleware(
+            token_count_method="approximate",
+            edits=[ClearToolUsesEdit()],
+        ),
+        ModelFallbackMiddleware("openai:gpt-4.1-mini"),
     ],
 )
