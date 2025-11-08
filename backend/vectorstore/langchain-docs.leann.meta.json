@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "backend_name": "hnsw",
+  "embedding_model": "text-embedding-3-small",
+  "dimensions": 1536,
+  "backend_kwargs": {
+    "distance_metric": "cosine"
+  },
+  "embedding_mode": "openai",
+  "passage_sources": [
+    {
+      "type": "jsonl",
+      "path": "langchain-docs.leann.passages.jsonl",
+      "index_path": "langchain-docs.leann.passages.idx",
+      "path_relative": "langchain-docs.leann.passages.jsonl",
+      "index_path_relative": "langchain-docs.leann.passages.idx"
+    }
+  ],
+  "is_compact": true,
+  "is_pruned": true
+}

@@ -36,7 +36,8 @@ docker-compose up -d
 이 명령은 다음 서비스를 시작합니다:
 - **PostgreSQL**: LangGraph 상태 저장용 데이터베이스 (포트 5432)
 - **Redis**: 캐싱 서비스 (포트 6379)
-- **LangGraph API**: LangGraph 애플리케이션 서버 (포트 8000)
+- **LangGraph API**: LangGraph 애플리케이션 서버 (포트 8123)
+- **Frontend**: Next.js 웹 인터페이스 (포트 3000)
 
 ### 로그 확인
 
@@ -54,32 +55,39 @@ docker-compose logs -f langgraph-api
 docker-compose ps
 ```
 
-## 3. API 접속
+## 3. 서비스 접속
+
+### 프론트엔드
+
+Next.js 웹 인터페이스:
+- **웹 UI**: http://localhost:3000
+
+### 백엔드 API
 
 LangGraph API는 다음 주소에서 접속 가능합니다:
 
-- **API Base URL**: http://localhost:8000
-- **Health Check**: http://localhost:8000/ok (응답: `{"ok":true}`)
-- **API Docs**: http://localhost:8000/docs
-- **Server Info**: http://localhost:8000/info
-- **Metrics**: http://localhost:8000/metrics
+- **API Base URL**: http://localhost:8123
+- **Health Check**: http://localhost:8123/ok (응답: `{"ok":true}`)
+- **API Docs**: http://localhost:8123/docs
+- **Server Info**: http://localhost:8123/info
+- **Metrics**: http://localhost:8123/metrics
 
 ### 테스트 요청 예시
 
 ```bash
 # Health check
-curl http://localhost:8000/ok
+curl http://localhost:8123/ok
 
 # 예상 응답: {"ok":true}
 
 # 서버 정보 확인
-curl http://localhost:8000/info
+curl http://localhost:8123/info
 
 # API 문서 확인 (브라우저에서)
-open http://localhost:8000/docs
+open http://localhost:8123/docs
 
 # 사용 가능한 그래프 목록
-curl http://localhost:8000/assistants/search
+curl http://localhost:8123/assistants/search
 ```
 
 ## 4. 서비스 중지 및 제거
@@ -124,13 +132,21 @@ docker-compose restart langgraph-api
 
 ### 포트 충돌 문제
 
-기본 포트(5432, 6379, 8000)가 이미 사용 중인 경우, `docker-compose.yml`에서 포트를 변경할 수 있습니다:
+기본 포트(5432, 6379, 8123, 3000)가 이미 사용 중인 경우, `docker-compose.yml`에서 포트를 변경할 수 있습니다:
 
 ```yaml
 services:
   postgres:
     ports:
       - "15432:5432"  # 왼쪽 포트 변경
+
+  langgraph-api:
+    ports:
+      - "18123:8123"  # API 포트 변경
+
+  frontend:
+    ports:
+      - "13000:3000"  # 프론트엔드 포트 변경
 ```
 
 ### 데이터베이스 연결 실패
@@ -147,10 +163,10 @@ services:
 
 ### 벡터 스토어 파일 문제
 
-`vectorstore` 디렉토리가 존재하고 `.leann` 파일이 있는지 확인:
+`backend/vectorstore` 디렉토리가 존재하고 파일이 있는지 확인:
 
 ```bash
-ls -la vectorstore/
+ls -la backend/vectorstore/
 ```
 
 ### API 키 문제
@@ -163,17 +179,39 @@ docker-compose exec langgraph-api env | grep API_KEY
 
 ## 7. 개발 모드
 
-개발 중 코드 변경 사항을 실시간으로 반영하려면 `docker-compose.yml`의 volumes 설정을 다음과 같이 수정:
+### 백엔드 개발 모드
+
+개발 중 코드 변경 사항을 실시간으로 반영하려면 `docker-compose.yml`의 langgraph-api 서비스 volumes 설정을 다음과 같이 수정:
 
 ```yaml
-volumes:
-  - .:/app  # 전체 프로젝트 디렉토리를 마운트
+langgraph-api:
+  volumes:
+    - ./backend:/app  # 백엔드 코드 마운트
+    - ./backend/vectorstore:/app/vectorstore:ro
+    - ./backend/prompts:/app/prompts:ro
 ```
 
 그리고 다음 명령으로 재시작:
 
 ```bash
 docker-compose restart langgraph-api
+```
+
+### 프론트엔드 개발 모드
+
+프론트엔드는 로컬에서 개발하는 것이 더 편리합니다:
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+프론트엔드가 http://localhost:3000에서 실행되며, API는 환경 변수 `LANGGRAPH_API_URL`을 통해 백엔드와 연결됩니다.
+
+frontend/.env.local 파일 생성:
+```bash
+LANGGRAPH_API_URL=http://localhost:8123
 ```
 
 ## 8. 데이터 백업
@@ -190,9 +228,29 @@ docker-compose exec postgres pg_dump -U langgraph langgraph > backup.sql
 docker-compose exec -T postgres psql -U langgraph langgraph < backup.sql
 ```
 
+## 9. 프로젝트 구조
+
+```
+langchain-rag-agent/
+├── backend/              # LangGraph API 백엔드
+│   ├── app.py           # 애플리케이션 엔트리포인트
+│   ├── graph.py         # LangGraph 그래프 정의
+│   ├── vectorstore/     # RAG 벡터 저장소
+│   ├── prompts/         # 프롬프트 템플릿
+│   ├── Dockerfile       # 백엔드 Docker 이미지
+│   └── pyproject.toml   # Python 의존성
+├── frontend/            # Next.js 프론트엔드
+│   ├── app/            # Next.js 앱 라우터
+│   ├── components/     # React 컴포넌트
+│   ├── Dockerfile      # 프론트엔드 Docker 이미지
+│   └── package.json    # Node.js 의존성
+└── docker-compose.yml  # 전체 스택 오케스트레이션
+```
+
 ## 참고사항
 
 - 로컬 환경에서는 LangSmith 클라우드 연동 없이 동작합니다
 - 모든 상태는 PostgreSQL에 저장됩니다
 - Redis는 선택사항이지만 성능 향상을 위해 권장됩니다
 - 프로덕션 환경에서는 보안을 위해 데이터베이스 비밀번호를 변경하세요
+- 프론트엔드는 Next.js로 구축되어 있으며, 백엔드 API와 통신합니다

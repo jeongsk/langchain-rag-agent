@@ -1,0 +1,53 @@
+_type: tool_description
+tool_name: search
+description: |
+  Search the LangChain and LangGraph documentation for relevant information using semantic similarity.
+
+  This tool searches through the official LangChain and LangGraph documentation to find
+  the most relevant passages that match the semantic meaning of your query. Use this when
+  you need information about:
+  - LangChain framework usage, APIs, and patterns
+  - LangGraph architecture, state management, and agent workflows
+  - Code examples and best practices from official docs
+  - Troubleshooting common issues
+
+  IMPORTANT: Query must be in English only, even if the user's question is in another language.
+  If the user asks in Korean or another language, translate the key concepts to English first.
+
+parameters:
+  query:
+    type: string
+    required: true
+    description: |
+      Search query in English. Should be a clear, descriptive phrase or question
+      that captures what information you're looking for.
+    examples:
+      - "how to create a LangGraph supervisor agent"
+      - "LangChain tool calling with OpenAI"
+      - "StateGraph concurrent updates"
+
+  top_k:
+    type: integer
+    required: false
+    default: 5
+    description: "Number of most relevant results to return (default: 5, max recommended: 10)"
+
+returns:
+  type: string
+  format: xml
+  description: |
+    String containing the search results in XML format, with each result including:
+    - source: The origin/location within LangChain/LangGraph documentation
+    - text: The relevant content from the documentation
+
+usage_tips:
+  - "Use specific, descriptive queries rather than single keywords"
+  - "For better results, formulate queries as questions or clear search phrases"
+  - "If initial results aren't relevant, try rephrasing the query with different terms"
+  - "Adjust top_k based on how comprehensive you need the results to be"
+  - "When searching for specific APIs or classes, include the exact name in the query"
+
+metadata:
+  version: "1.0"
+  created_at: "2025-11-02"
+  last_modified: "2025-11-02"
